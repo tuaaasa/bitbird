@@ -103,6 +103,7 @@ while True:
         if trigger:
             trigger = True
             slack.notify(text=log)
+            print("slack通知")
     else:
         trigger = False
         print("スルー")
