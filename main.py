@@ -90,6 +90,7 @@ def check_akasanpei(ohlcv_data_1, ohlcv_data_2, ohlcv_data_3):
 # def check_kurosannpei(ohlcv_data_0, ohlcv_data_1, ohlcv_data_2):
 # ここからがメイン処理
 # 最終的な注文を行う
+trigger = False
 while True:
     ohlcv_0 = get_ohlcv(0, 60)
     ohlcv_1 = get_ohlcv(1, 60)
@@ -99,7 +100,10 @@ while True:
     print(log)
     if check_akasanpei(ohlcv_1, ohlcv_2, ohlcv_3):
         print("検知")
-        slack.notify(text=log)
+        if trigger:
+            trigger = True
+            slack.notify(text=log)
     else:
+        trigger = False
         print("スルー")
-    time.sleep(60)
+    time.sleep(0)
