@@ -95,7 +95,9 @@ while True:
     ohlcv_1 = get_ohlcv(1, 60)
     ohlcv_2 = get_ohlcv(2, 60)
     ohlcv_3 = get_ohlcv(3, 60)
+    print show_ohlcv(ohlcv_0)
     if check_akasanpei(ohlcv_1, ohlcv_2, ohlcv_3):
+        print("検知")
         slack.notify(text=show_ohlcv(ohlcv_0))
     else:
         print("スルー")
