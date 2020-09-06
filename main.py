@@ -102,4 +102,4 @@ while True:
         slack.notify(text=log)
     else:
         print("スルー")
-    time.sleep(0)
+    time.sleep(60)
