@@ -37,11 +37,11 @@ def get_ohlcv(candle, period):
 
 def show_ohlcv(ohlcv_data):
     return "時間： " + datetime.fromtimestamp(ohlcv_data["close_time"]).strftime('%Y/%m/%d %H:%M')\
-        + "\n始値： " + str(ohlcv_data["open_price"])\
-        + "\n高値： " + str(ohlcv_data["high_price"])\
-        + "\n安値： " + str(ohlcv_data["low_price"])\
-        + "\n終値： " + str(ohlcv_data["close_price"])\
-        + "\n出来高： " + str(ohlcv_data["volume"])\
+        + "  始値： " + str(ohlcv_data["open_price"])\
+        + "  高値： " + str(ohlcv_data["high_price"])\
+        + "  安値： " + str(ohlcv_data["low_price"])\
+        + "  終値： " + str(ohlcv_data["close_price"])\
+        + "  出来高： " + str(ohlcv_data["volume"])\
 
 # 陽線陰線チェック関数
 
@@ -95,10 +95,11 @@ while True:
     ohlcv_1 = get_ohlcv(1, 60)
     ohlcv_2 = get_ohlcv(2, 60)
     ohlcv_3 = get_ohlcv(3, 60)
-    print show_ohlcv(ohlcv_0)
+    log = show_ohlcv(ohlcv_0)
+    print(log)
     if check_akasanpei(ohlcv_1, ohlcv_2, ohlcv_3):
         print("検知")
-        slack.notify(text=show_ohlcv(ohlcv_0))
+        slack.notify(text=log)
     else:
         print("スルー")
     time.sleep(0)
