@@ -100,7 +100,7 @@ while True:
     print(log)
     if check_akasanpei(ohlcv_1, ohlcv_2, ohlcv_3):
         print("検知")
-        if trigger:
+        if not trigger:
             trigger = True
             slack.notify(text=log)
             print("slack通知")
