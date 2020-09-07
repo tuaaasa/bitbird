@@ -2,17 +2,15 @@
 import requests
 from datetime import datetime
 import time
-import slackweb
 # デバッグ用
 response = requests.get(
     "https://api.cryptowat.ch/markets/bitflyer/btcfxjpy/ohlc", params={"periods": 60})
 # CryptowatchからOHLCV取得
 
-slack = slackweb.Slack(
-    "https://hooks.slack.com/services/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")
+# TODO: 一括で取りたい
 
 
-def get_ohlcv(candle, period):
+def get_ohlcv(period, start_candle, end_candle):
     """
     candle：何本前のローソク（現在なら0を入れる）
     period：足のレンジ（1m=60，1h=3600，1d=86400）
@@ -90,6 +88,20 @@ def isDescend(ohlcv_data, last_ohlcv_data):
 
 # 赤三兵による買いサイン
 
+# TODO: ろうそくの大きさ判定
+# def check_candle(ohlcv_data, side):
+#   realbody_rate = abs(data["close_price"] - data["open_price"]
+#                       ) / (data["high_price"]-data["low_price"])
+# 	increase_rate = data["close_price"] / data["open_price"] - 1
+
+#   if side == "buy":
+# 		if data["close_price"] < data["open_price"] or increase_rate < 0.0003 or realbody_rate < 0.5: return False
+# 		else: return True
+
+# 	if side == "sell":
+# 		if data["close_price"] > data["open_price"] or increase_rate > -0.0003 or realbody_rate < 0.5: return False
+# 		else: return True
+
 
 def check_akasanpei(ohlcv_data_1, ohlcv_data_2, ohlcv_data_3):
     """
@@ -104,6 +116,8 @@ def check_akasanpei(ohlcv_data_1, ohlcv_data_2, ohlcv_data_3):
     シグナル発生：True．
     シグナルなし：False．
     """
+    check_candle([ohlcv_data_1, ohlcv_data_2, ohlcv_data_3])
+
     if isPositive(ohlcv_data_1) and isPositive(ohlcv_data_2) and isPositive(ohlcv_data_3) and isAscend(ohlcv_data_1, ohlcv_data_2) and isAscend(ohlcv_data_2, ohlcv_data_3):
         return True
     else:
@@ -128,23 +142,3 @@ def check_kurosannpei(ohlcv_data_1, ohlcv_data_2, ohlcv_data_3):
         return True
     else:
         return False
-
-
-# ここからがメイン処理
-# 最終的な注文を行う
-i = 0
-while True:
-    ohlcv_0 = get_ohlcv(i, 60)
-    ohlcv_1 = get_ohlcv(i+1, 60)
-    ohlcv_2 = get_ohlcv(i+2, 60)
-    ohlcv_3 = get_ohlcv(i+3, 60)
-    show_ohlcv(ohlcv_0)
-    if check_akasanpei(ohlcv_1, ohlcv_2, ohlcv_3):
-        slack.notify(text=l"赤三兵")
-        print("赤三兵")
-    if check_kurosannpei(ohlcv_1, ohlcv_2, ohlcv_3):
-        slack.notify(text="黒三兵")
-        print("黒三兵")
-
-    i = i + 1
-    time.sleep(0)
