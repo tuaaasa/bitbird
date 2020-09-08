@@ -3,8 +3,14 @@ import requests
 from datetime import datetime
 import time
 
+REALBODY_RATE = 0.3
+INCREASE_RATE = 0.0003
+ORDER_BUY = "buy"
+ORDER_SELL = "sell"
 
 # OHLCVデータ取得関数
+
+
 def get_ohlcv(period, before=0, after=0):
     """
     period: 時間足（1m=60，1h=3600，1d=86400）
@@ -74,20 +80,20 @@ def show_all_ohlcv(ohlcv_data):
 
 
 # 陽線陰線チェック関数
-def isPositive(a_ohlcv_data):
+def isPositive(ohlcv_data):
     """
     【返り値】
     陽線：True
     陰線：False
     """
-    if a_ohlcv_data["close_price"] > a_ohlcv_data["open_price"]:
+    if ohlcv_data["close_price"] > ohlcv_data["open_price"]:
         return True
     else:
         return False
 
 
 # 上昇チェック関数
-def isAscend(ohlcv_data, ohlcv_data_list):
+def isAscend(before_ohlcv_data, ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -96,14 +102,14 @@ def isAscend(ohlcv_data, ohlcv_data_list):
     上昇：True
     それ以外：Flase
     """
-    if ohlcv_data["open_price"] > ohlcv_data_list["open_price"] and ohlcv_data["close_price"] > ohlcv_data_list["close_price"]:
+    if before_ohlcv_data["open_price"] > ohlcv_data["open_price"] and before_ohlcv_data["close_price"] > ohlcv_data["close_price"]:
         return True
     else:
         return False
 
 
 # 下降チェック関数
-def isDescend(ohlcv_data, ohlcv_data_list):
+def isDescend(before_ohlcv_data, ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -112,29 +118,33 @@ def isDescend(ohlcv_data, ohlcv_data_list):
     下降：Flase
     それ以外：True
     """
-    if ohlcv_data["open_price"] < ohlcv_data_list["open_price"] and ohlcv_data["close_price"] < ohlcv_data_list["close_price"]:
+    if before_ohlcv_data["open_price"] < ohlcv_data["open_price"] and before_ohlcv_data["close_price"] < ohlcv_data["close_price"]:
         return True
     else:
         return False
 
 
-# TODO: ろうそくの大きさ判定
-# def check_candle(ohlcv_data, n=0):
-#   realbody_rate = abs(data["close_price"] - data["open_price"]
-#                       ) / (data["high_price"]-data["low_price"])
-# 	increase_rate = data["close_price"] / data["open_price"] - 1
+# ろうそくの大きさ判定
+def check_candle(ohlcv_data, order_type):
+    realbody_rate = abs(ohlcv_data["close_price"] - ohlcv_data["open_price"]) / (
+        ohlcv_data["high_price"]-ohlcv_data["low_price"])
+    increase_rate = (ohlcv_data["close_price"] / ohlcv_data["open_price"])-1
 
-#   if side == "buy":
-# 		if data["close_price"] < data["open_price"] or increase_rate < 0.0003 or realbody_rate < 0.5: return False
-# 		else: return True
+    if order_type == ORDER_BUY:
+        if ohlcv_data["close_price"] < ohlcv_data["open_price"] or increase_rate < INCREASE_RATE or realbody_rate < REALBODY_RATE:
+            return False
+        else:
+            return True
 
-# 	if side == "sell":
-# 		if data["close_price"] > data["open_price"] or increase_rate > -0.0003 or realbody_rate < 0.5: return False
-# 		else: return True
+    if order_type == ORDER_SELL:
+        if ohlcv_data["close_price"] > ohlcv_data["open_price"] or increase_rate > -INCREASE_RATE or realbody_rate < REALBODY_RATE:
+            return False
+        else:
+            return True
 
 
 # 赤三兵による買いサイン
-def check_akasanpei(ohlcv_data, n=0):
+def check_akasanpei(ohlcv_data_list, n=0):
     """
     【条件】
     1．3足連続で（終値＞始値）の足が続いている．
@@ -146,17 +156,22 @@ def check_akasanpei(ohlcv_data, n=0):
     シグナル発生：True．
     シグナルなし：False．
     """
-    # check_candle([ohlcv_data_1, ohlcv_data_2, ohlcv_data_3])
+    target_ohlcv_data_list = [ohlcv_data_list[i+1] for i in range(
+        n, n+3)]  # [ohlcv_data_list[n+1], ohlcv_data_list[n+2], ohlcv_data_list[n+3]]
+
+    def isPositiveCandle(ohlcv_data):
+        return isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_BUY)
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
-    if isPositive(ohlcv_data[n+1]) and isPositive(ohlcv_data[n+2]) and isPositive(ohlcv_data[n+3]) and isAscend(ohlcv_data[n+1], ohlcv_data[n+2]) and isAscend(ohlcv_data[n+2], ohlcv_data[n+3]):
+    # https://qiita.com/l_v_yonsama/items/07e754193ed88ed0baaf#%E9%85%8D%E5%88%97%E3%81%AE%E3%81%99%E3%81%B9%E3%81%A6%E3%81%AE%E8%A6%81%E7%B4%A0%E3%81%8C%E9%80%9A%E3%82%8B%E3%81%8B%E3%81%A9%E3%81%86%E3%81%8B%E3%82%92%E3%83%86%E3%82%B9%E3%83%88
+    if all(isPositiveCandle(v) for v in target_ohlcv_data_list) and isAscend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isAscend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
         return True
     else:
         return False
 
 
 # 黒三兵による売りサイン
-def check_kurosannpei(ohlcv_data, n=0):
+def check_kurosannpei(ohlcv_data_list, n=0):
     """
     【条件】
     1．3足連続で（終値＜始値）の足が続いている．
@@ -168,8 +183,13 @@ def check_kurosannpei(ohlcv_data, n=0):
     シグナル発生：True．
     シグナルなし：False．
     """
+    target_ohlcv_data_list = [ohlcv_data_list[i+1] for i in range(n, n+3)]
+
+    def isNegativeCandle(ohlcv_data):
+        return not isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_SELL)
+
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
-    if not isPositive(ohlcv_data[n+1]) and not isPositive(ohlcv_data[n+2]) and not isPositive(ohlcv_data[n+3]) and isDescend(ohlcv_data[n+1], ohlcv_data[n+2]) and isDescend(ohlcv_data[n+2], ohlcv_data[n+3]):
+    if all(isNegativeCandle(v) for v in target_ohlcv_data_list) and isDescend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isDescend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
         return True
     else:
         return False

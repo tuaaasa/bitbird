@@ -7,9 +7,9 @@ period = 60
 ohlcv = functions.get_ohlcv(period)
 
 flag = {
-	"buy_signal":0,
-	"order":False,
-	"position":False
+    "buy_signal": 0,
+    "order": False,
+    "position": False
 }
 
 for i in range(300):
@@ -18,4 +18,4 @@ for i in range(300):
         print("赤三兵")
     if functions.check_kurosannpei(ohlcv, i):
         print("黒三平")
-    time.sleep(1)
+    time.sleep(0.05)
