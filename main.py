@@ -6,7 +6,7 @@ import time
 period = 60
 ohlcv = functions.get_ohlcv(period)
 
-flag = {
+status = {
 	"buy_signal":0,
 	"order":False,
 	"position":False
