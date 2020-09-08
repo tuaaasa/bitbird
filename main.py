@@ -6,6 +6,12 @@ import time
 period = 60
 ohlcv = functions.get_ohlcv(period)
 
+flag = {
+	"buy_signal":0,
+	"order":False,
+	"position":False
+}
+
 for i in range(300):
     functions.show_ohlcv(ohlcv, i, 1)
     if functions.check_akasanpei(ohlcv, i):
