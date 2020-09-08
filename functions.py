@@ -112,7 +112,7 @@ def isDescend(ohlcv_data, ohlcv_data_list):
     下降：Flase
     それ以外：True
     """
-    if ohlcv_data["open_price"] < ohlcv_data_last["open_price"] and ohlcv_data["close_price"] < ohlcv_data_last["close_price"]:
+    if ohlcv_data["open_price"] < ohlcv_data_list["open_price"] and ohlcv_data["close_price"] < ohlcv_data_list["close_price"]:
         return True
     else:
         return False
