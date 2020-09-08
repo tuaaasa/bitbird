@@ -17,23 +17,25 @@ def get_ohlcv(period, before=0, after=0):
     [UNIX取引時間（close time），取引時間（close time dt），始値(open price)，高値(hogh price)，安値(low price)，終値(close price)，出来高(volume)]
     """
     ohlcv = []
-    params = {"periods" : period }
+    params = {"periods": period}
     if before != 0:
         params["before"] = before
     if after != 0:
         params["after"] = after
-    response = requests.get("https://api.cryptowat.ch/markets/bitflyer/btcfxjpy/ohlc",params)
+    response = requests.get(
+        "https://api.cryptowat.ch/markets/bitflyer/btcfxjpy/ohlc", params)
     data = response.json()
-	
-    if data["result"][str(period)] is not None:     # [取引時間（close time），始値(open price)，高値(hogh price)，安値(low price)，終値(close price)，出来高(volume)]
+
+    # [取引時間（close time），始値(open price)，高値(hogh price)，安値(low price)，終値(close price)，出来高(volume)]
+    if data["result"][str(period)] is not None:
         for i in data["result"][str(period)]:
-            ohlcv.insert(0, { "close_time" : i[0],
-            "close_time_dt" : datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
-            "open_price" : i[1],
-            "high_price" : i[2],
-            "low_price" : i[3],
-            "close_price": i[4],
-            "volume": i[5] })
+            ohlcv.insert(0, {"close_time": i[0],
+                             "close_time_dt": datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
+                             "open_price": i[1],
+                             "high_price": i[2],
+                             "low_price": i[3],
+                             "close_price": i[4],
+                             "volume": i[5]})
     return ohlcv
 
 
@@ -45,14 +47,14 @@ def show_ohlcv(ohlcv_data, begin=0, num=1):
     num: 表示個数
     """
     for i in range(begin, begin + num):
-        print( "UNIX時間：" + str(ohlcv_data[i]["close_price"])
-        + " 　時間：" + str(ohlcv_data[i]["close_time_dt"])
-        + " 　始値：" + str(ohlcv_data[i]["open_price"])
-        + " 　高値：" + str(ohlcv_data[i]["high_price"])
-        + " 　安値：" + str(ohlcv_data[i]["low_price"])
-        + " 　終値：" + str(ohlcv_data[i]["close_price"])
-        + " 　出来高：" + str(ohlcv_data[i]["volume"])
-        )
+        print("UNIX時間：" + str(ohlcv_data[i]["close_price"])
+              + " 　時間：" + str(ohlcv_data[i]["close_time_dt"])
+              + " 　始値：" + str(ohlcv_data[i]["open_price"])
+              + " 　高値：" + str(ohlcv_data[i]["high_price"])
+              + " 　安値：" + str(ohlcv_data[i]["low_price"])
+              + " 　終値：" + str(ohlcv_data[i]["close_price"])
+              + " 　出来高：" + str(ohlcv_data[i]["volume"])
+              )
 
 
 # 全てのOHLCV表示関数
@@ -61,14 +63,14 @@ def show_all_ohlcv(ohlcv_data):
     ohlcv_data: リスト型OHLCVデータ
     """
     for i in ohlcv_data:
-        print( "UNIX時間：" + str(i["close_price"])
-        + " 　時間：" + str(i["close_time_dt"])
-        + " 　始値：" + str(i["open_price"])
-        + " 　高値：" + str(i["high_price"])
-        + " 　安値：" + str(i["low_price"])
-        + " 　終値：" + str(i["close_price"])
-        + " 　出来高：" + str(i["volume"])
-        )
+        print("UNIX時間：" + str(i["close_price"])
+              + " 　時間：" + str(i["close_time_dt"])
+              + " 　始値：" + str(i["open_price"])
+              + " 　高値：" + str(i["high_price"])
+              + " 　安値：" + str(i["low_price"])
+              + " 　終値：" + str(i["close_price"])
+              + " 　出来高：" + str(i["volume"])
+              )
 
 
 # 陽線陰線チェック関数
@@ -85,7 +87,7 @@ def isPositive(a_ohlcv_data):
 
 
 # 上昇チェック関数
-def isAscend(a_ohlcv_data, a_last_ohlcv_data):
+def isAscend(ohlcv_data, ohlcv_data_list):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -94,14 +96,14 @@ def isAscend(a_ohlcv_data, a_last_ohlcv_data):
     上昇：True
     それ以外：Flase
     """
-    if a_ohlcv_data["open_price"] > a_last_ohlcv_data["open_price"] and a_ohlcv_data["close_price"] > a_last_ohlcv_data["close_price"]:
+    if ohlcv_data["open_price"] > ohlcv_data_list["open_price"] and ohlcv_data["close_price"] > ohlcv_data_list["close_price"]:
         return True
     else:
-         return False
+        return False
 
 
 # 下降チェック関数
-def isDescend(a_ohlcv_data, a_last_ohlcv_data):
+def isDescend(ohlcv_data, ohlcv_data_list):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -110,14 +112,14 @@ def isDescend(a_ohlcv_data, a_last_ohlcv_data):
     下降：Flase
     それ以外：True
     """
-    if a_ohlcv_data["open_price"] < a_last_ohlcv_data["open_price"] and a_ohlcv_data["close_price"] < a_last_ohlcv_data["close_price"]:
+    if ohlcv_data["open_price"] < ohlcv_data_last["open_price"] and ohlcv_data["close_price"] < ohlcv_data_last["close_price"]:
         return True
     else:
         return False
 
 
 # TODO: ろうそくの大きさ判定
-# def check_candle(ohlcv_data, side):
+# def check_candle(ohlcv_data, n=0):
 #   realbody_rate = abs(data["close_price"] - data["open_price"]
 #                       ) / (data["high_price"]-data["low_price"])
 # 	increase_rate = data["close_price"] / data["open_price"] - 1
@@ -174,14 +176,12 @@ def check_kurosannpei(ohlcv_data, n=0):
 
 
 # テスト用
-period = 60
-test_data = get_ohlcv(period)
+# period = 60
+# test_data = get_ohlcv(period)
 
-for i in range(300):
-    show_ohlcv(test_data, i, 1)
-    if check_akasanpei(test_data, i):
-        print("赤三兵")
-    if check_kurosannpei(test_data, i):
-        print("黒三平")
-
-
+# for i in range(300):
+#     show_ohlcv(test_data, i, 1)
+#     if check_akasanpei(test_data, i):
+#         print("赤三兵")
+#     if check_kurosannpei(test_data, i):
+#         print("黒三平")
