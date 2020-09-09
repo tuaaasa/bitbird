@@ -1,8 +1,10 @@
 # coding: utf-8
-import requests
 import ccxt
-import config
+from pprint import pprint
 
 bitflyer = ccxt.bitflyer()
-bitflyer.apiKey = config.BITFLYER['API_KEY']
-bitflyer.secret = config.BITFLYER['SECRET']
+bitflyer.apiKey = 'SZz2PtRTJDU8e6RPA9dp5r'
+bitflyer.secret = 'XXX'
+
+collateral = bitflyer.private_get_getcollateral()
+pprint( collateral )
