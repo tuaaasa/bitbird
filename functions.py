@@ -53,7 +53,7 @@ def show_ohlcv(ohlcv_data, begin=0, num=1):
     num: 表示個数
     """
     for i in range(begin, begin + num):
-        print("UNIX時間：" + str(ohlcv_data[i]["close_price"])
+        print("UNIX時間：" + str(ohlcv_data[i]["close_time"])
               + " 　時間：" + str(ohlcv_data[i]["close_time_dt"])
               + " 　始値：" + str(ohlcv_data[i]["open_price"])
               + " 　高値：" + str(ohlcv_data[i]["high_price"])
@@ -93,7 +93,7 @@ def isPositive(ohlcv_data):
 
 
 # 上昇チェック関数
-def isAscend(before_ohlcv_data, ohlcv_data):
+def isAscend(ohlcv_data, last_ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -102,14 +102,14 @@ def isAscend(before_ohlcv_data, ohlcv_data):
     上昇：True
     それ以外：Flase
     """
-    if before_ohlcv_data["open_price"] > ohlcv_data["open_price"] and before_ohlcv_data["close_price"] > ohlcv_data["close_price"]:
+    if ohlcv_data["open_price"] > last_ohlcv_data["open_price"] and ohlcv_data["close_price"] > last_ohlcv_data["close_price"]:
         return True
     else:
         return False
 
 
 # 下降チェック関数
-def isDescend(before_ohlcv_data, ohlcv_data):
+def isDescend(ohlcv_data, last_ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -118,7 +118,7 @@ def isDescend(before_ohlcv_data, ohlcv_data):
     下降：Flase
     それ以外：True
     """
-    if before_ohlcv_data["open_price"] < ohlcv_data["open_price"] and before_ohlcv_data["close_price"] < ohlcv_data["close_price"]:
+    if ohlcv_data["open_price"] < last_ohlcv_data["open_price"] and ohlcv_data["close_price"] < last_ohlcv_data["close_price"]:
         return True
     else:
         return False
@@ -195,13 +195,44 @@ def check_kurosannpei(ohlcv_data_list, n=0):
         return False
 
 
-# テスト用
-# period = 60
-# test_data = get_ohlcv(period)
+# BUYシグナルをチェックする関数
+def buy_signal(status, ohlcv_data_list, begin=0):
 
-# for i in range(300):
-#     show_ohlcv(test_data, i, 1)
-#     if check_akasanpei(test_data, i):
-#         print("赤三兵")
-#     if check_kurosannpei(test_data, i):
-#         print("黒三平")
+    """
+    【返り値】
+    status（リスト型）
+    シグナル発生：status[order] True
+    シグナルなし：status[order]: Flase
+    """
+    # 赤三兵
+    if check_akasanpei(ohlcv_data_list, begin):
+        status["order"] = True  # 赤三兵が起きたのでオーダー状態に
+        print("赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
+
+    return status
+
+# 注文が約定したか確認する関数
+# テスト用に指値は確実に約定するようにしてある
+def check_order(status):
+    
+    # BitFlyerに約定を確認する
+
+    # 注文が一定時間約定したければ自動キャンセル
+
+    # 約定してポジションを持ったらstatus更新
+    # if 注文が通ったら
+    status["order"] = False
+    status["position"] = True
+    print("約定しました")
+
+    return status
+
+# ポジジョン清算関数
+def settlement_position(status, ohlcv_data_list, begin=0):
+    
+    # 現在の価格が前ローソク足の終値を下回った時
+    if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
+        print("前回の終値を下回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "で決済")
+        status["position"] = False
+    
+    return status

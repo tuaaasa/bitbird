@@ -2,19 +2,25 @@
 import functions
 import time
 
-period = 60
+period = 3600   # 1m=60，1h=3600，1d=86400
 ohlcv = functions.get_ohlcv(period)
 
-flag = {
-    "buy_signal": 0,
-    "order": False,
-    "position": False
+status = {
+    "order": False,         # オーダーある？
+    "position": False       # ポジションある？
 }
 
-for i in range(300):
-    functions.show_ohlcv(ohlcv, i, 1)
-    if functions.check_akasanpei(ohlcv, i):
-        print("赤三兵")
-    if functions.check_kurosannpei(ohlcv, i):
-        print("黒三平")
-    time.sleep(0.05)
+for i in reversed(range(300)):  # 新しいデータが入ってきていると仮定
+    functions.show_ohlcv(ohlcv, i)
+
+    # BUYシグナルチェック
+    if not status["position"]:
+        status = functions.buy_signal(status, ohlcv, i)
+
+    if status["order"]:
+        status = functions.check_order(status) # オーダーの約定をチェック
+    
+    if status["position"]:
+        status = functions.settlement_position(status, ohlcv, i)
+    
+    time.sleep(0.01)
