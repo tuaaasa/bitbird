@@ -197,7 +197,6 @@ def check_kurosannpei(ohlcv_data_list, n=0):
 
 # BUYシグナルをチェックする関数
 def buy_signal(status, ohlcv_data_list, begin=0):
-
     """
     【返り値】
     status（リスト型）
@@ -206,9 +205,47 @@ def buy_signal(status, ohlcv_data_list, begin=0):
     """
     # 赤三兵
     if check_akasanpei(ohlcv_data_list, begin):
-        status["order"] = True  # 赤三兵が起きたのでオーダー状態に
+        status["buy_signal"] = True
         print("赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
 
+    return status
+
+
+# BUYシグナルをチェックする関数
+def sell_signal(status, ohlcv_data_list, begin=0):
+    """
+    【返り値】
+    status（リスト型）
+    シグナル発生：status[order] True
+    シグナルなし：status[order]: Flase
+    """
+    # 黒三兵
+    if check_kurosannpei(ohlcv_data_list, begin):
+        status["sell_signal"] = True
+        print("黒三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で売りを入れます")
+
+    return status
+
+# 注文を出す関数
+# TODO 両方のシグナルが発生した場合はどうする？
+def place_order(status, ohlcv, i):
+    if status["buy_signal"]:
+
+        # BitFlyerにオーダーを出す（要実装）
+
+        status["order"]["exist"] = True
+        status["order"]["side"] = "BUY"
+
+    if status["sell_signal"]:
+
+        # BitFlyerにオーダーを出す（要実装）
+
+        status["order"]["exist"] = True
+        status["order"]["side"] = "SELL"
+
+    # シグナル初期化
+    status["buy_signal"] = False
+    status["sell_signal"] = False
     return status
 
 # 注文が約定したか確認する関数
@@ -221,18 +258,37 @@ def check_order(status):
 
     # 約定してポジションを持ったらstatus更新
     # if 注文が通ったら
-    status["order"] = False
-    status["position"] = True
-    print("約定しました")
+    print("注文が約定しました")
+    
+    status["order"]["exist"] = False
+    status["position"]["exist"] = True
+    status["position"]["side"] = status["order"]["side"]
+    status["order"]["side"] = ""    #オーダーサイドを初期化
 
     return status
 
-# ポジジョン清算関数
+
+# ポジジョンを清算するか関数
+# この実装では清算戦略を立てづらい 清算シグナルとsettlementを関数で分けるか
+# これでは清算のオーダーが通ったか確認できない（成行注文だからいいのか？）
 def settlement_position(status, ohlcv_data_list, begin=0):
-    
-    # 現在の価格が前ローソク足の終値を下回った時
-    if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
-        print("前回の終値を下回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "で決済")
-        status["position"] = False
-    
+
+    if status["position"]["side"] == "BUY":
+        if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
+            print("前回の終値を下回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
+
+            # BitFlyerに清算注文を出す（要実装）
+
+            status["position"]["exist"] = False
+            status["position"]["side"] = ""
+
+    if status["position"]["side"] == "SELL":
+        if ohlcv_data_list[begin]["close_price"] > ohlcv_data_list[begin+1]["close_price"]:
+            print("前回の終値を上回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
+
+            # BitFlyerに清算注文を出す（要実装）
+
+            status["position"]["exist"] = False
+            status["position"]["side"] = ""
+
     return status
