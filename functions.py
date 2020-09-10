@@ -11,8 +11,8 @@ ORDER_SELL = "sell"
 
 # TODO ここに入れたくはない
 bitflyer = ccxt.bitflyer()
-bitflyer.apiKey = 'SZz2PtRTJDU8e6RPA9dp5r'
-bitflyer.secret = 'fkhxWqnEoj6m4QyzTzfhO5X+bSml6DCu3N/uhMHyIkM='
+bitflyer.apiKey = 'XXX'
+bitflyer.secret = 'XXX'
 
 
 # OHLCVデータ取得関数
