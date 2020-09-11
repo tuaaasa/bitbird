@@ -60,11 +60,8 @@ def show_ohlcv(ohlcv_data, begin=0, num=1):
 
 
 # 全てのOHLCV表示関数
-def show_all_ohlcv(ohlcv_data):
-    """
-    ohlcv_data: リスト型OHLCVデータ
-    """
-    for i in ohlcv_data:
+def show_all_ohlcv(ohlcv_data_list):
+    for i in ohlcv_data_list:
         print("UNIX時間：" + str(i["close_price"])
               + " 　時間：" + str(i["close_time_dt"])
               + " 　始値：" + str(i["open_price"])
@@ -205,11 +202,10 @@ def buy_signal(status, ohlcv_data_list, begin=0):
     if check_akasanpei(ohlcv_data_list, begin):
         status["buy_signal"] = True
         print("赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
-
     return status
 
 
-# BUYシグナルをチェックする関数
+# SELLシグナルをチェックする関数
 def sell_signal(status, ohlcv_data_list, begin=0):
     """
     【返り値】
@@ -221,7 +217,6 @@ def sell_signal(status, ohlcv_data_list, begin=0):
     if check_kurosannpei(ohlcv_data_list, begin):
         status["sell_signal"] = True
         print("黒三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で売りを入れます")
-
     return status
 
 
@@ -230,15 +225,15 @@ def sell_signal(status, ohlcv_data_list, begin=0):
 def place_order(status, ohlcv_data_list):
     if status["buy_signal"]:
         # BitFlyerに買いオーダーを出す
-        gateway.private_order_by_market('buy', 0.01)
-        print("BitFlyerに買いの成行注文を出しました")
+        # gateway.private_order_by_market('buy', 0.01)
+        gateway.private_order_by_limit('buy', ohlcv_data_list[1]["close_price"], 0.01) # 赤三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "BUY"
 
     if status["sell_signal"]:
         # BitFlyerに売りオーダーを出す
-        gateway.private_order_by_market('sell', 0.01)
-        print("BitFlyerに売りの成行注文を出しました")
+        # gateway.private_order_by_market('sell', 0.01)
+        gateway.private_order_by_limit('sell', ohlcv_data_list[1]["close_price"], 0.01) # 黒三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "SELL"
         
@@ -282,13 +277,13 @@ def cancel_order(orders, status):
     status["order"]["exist"] = False
 
     # 通信スレ違いで約定する可能があるため20秒後に再度確認
-    print("20秒後に，再度注文が約定していないかを確認します")
+    print("20秒後に，注文が約定していないかを再確認します")
     time.sleep(20)
     position = gateway.private_get_getpositions()
     if not position:
-        print("現在，未決済のポジションはありません")
+        print("現在，ポジションはありません")
     else:
-        print("現在，まだ未決済のポジションがあります")
+        print("現在，ポジションがあります")
         status["position"]["exist"] = True
         status["position"]["side"] = position[0]["side"]
     

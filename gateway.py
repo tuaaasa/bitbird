@@ -33,8 +33,8 @@ def private_order_by_market(side, amount):
                 side= side,
                 amount= amount,
                 params = { "product_code" : "FX_BTC_JPY" })
+            print(side + " の成行注文を出しました")
             time.sleep(10)      # APIの注文反映待ち
-            print("注文完了")
             break
         
         except ccxt.BaseError as e:
@@ -43,7 +43,26 @@ def private_order_by_market(side, amount):
             time.sleep(10)
 
 # 指値注文
-# def private_order_by_limit():
+def private_order_by_limit(side, plice, amount):
+    while True:
+        try:
+            print("指値価格: " + str(plice))
+            order = bitflyer.create_order(
+                symbol = 'BTC/JPY',
+                type= 'limit', 
+                side= side,
+                price= plice,
+                amount= amount,
+                params = { "product_code" : "FX_BTC_JPY" })
+            print("価格" + str(plice)  + "で " + side + " の指値注文を出しました")
+            time.sleep(10)      # APIの注文反映待ち
+            break
+        
+        except ccxt.BaseError as e:
+            print("BitFlyerのAPIエラー発生", e)
+            print("注文が失敗しました．10秒後に再度実行します")
+            time.sleep(10)
+            
 
 # BitFlyerにポジションを確認する関数
 def private_get_getpositions():
