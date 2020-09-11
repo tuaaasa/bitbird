@@ -1,19 +1,12 @@
 # coding: utf-8
-import requests
 from datetime import datetime
 import time
-import ccxt
+import gateway
 
 REALBODY_RATE = 0.3
 INCREASE_RATE = 0.0003
 ORDER_BUY = "buy"
 ORDER_SELL = "sell"
-
-# TODO ここに入れたくはない
-bitflyer = ccxt.bitflyer()
-bitflyer.apiKey = 'XXX'
-bitflyer.secret = 'XXX'
-
 
 # OHLCVデータ取得関数
 def get_ohlcv(period, before=0, after=0):
@@ -34,26 +27,18 @@ def get_ohlcv(period, before=0, after=0):
     if after != 0:
         params["after"] = after
 
-    while True:
-        try:
-            response = requests.get("https://api.cryptowat.ch/markets/bitflyer/btcfxjpy/ohlc", params)  # TODO APIアクセス制限ある
-            data = response.json()  # [取引時間（close time），始値(open price)，高値(hogh price)，安値(low price)，終値(close price)，出来高(volume)]
-            if data["result"][str(period)] is not None:
-                for i in data["result"][str(period)]:
-                    ohlcv.insert(0, {"close_time": i[0],
-                             "close_time_dt": datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
-                             "open_price": i[1],
-                             "high_price": i[2],
-                             "low_price": i[3],
-                             "close_price": i[4],
-                             "volume": i[5]})
-            return ohlcv
-        
-        # CryptWatchからのデータ取得失敗時
-        except requests.exceptions.RequestException as e:
-            print("CryptWatchからOHLCVデータの取得に失敗しました: ", e)
-            print("10秒後，再度実行します")
-            time.sleep(10)       
+    data = gateway.get_ohlcv_from_cryptowatch(params)
+
+    if data["result"][str(period)] is not None:
+        for i in data["result"][str(period)]:
+            ohlcv.insert(0, {"close_time": i[0],
+            "close_time_dt": datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
+            "open_price": i[1],
+            "high_price": i[2],
+            "low_price": i[3],
+            "close_price": i[4],
+            "volume": i[5]})
+    return ohlcv
 
 
 # OHLCV表示関数
@@ -171,7 +156,8 @@ def check_akasanpei(ohlcv_data_list, n=0):
         n, n+3)]  # [ohlcv_data_list[n+1], ohlcv_data_list[n+2], ohlcv_data_list[n+3]]
 
     def isPositiveCandle(ohlcv_data):
-        return isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_BUY)
+        # return isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_BUY)
+        return isPositive(ohlcv_data) # キャンドルチェック行わない
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
     # https://qiita.com/l_v_yonsama/items/07e754193ed88ed0baaf#%E9%85%8D%E5%88%97%E3%81%AE%E3%81%99%E3%81%B9%E3%81%A6%E3%81%AE%E8%A6%81%E7%B4%A0%E3%81%8C%E9%80%9A%E3%82%8B%E3%81%8B%E3%81%A9%E3%81%86%E3%81%8B%E3%82%92%E3%83%86%E3%82%B9%E3%83%88
@@ -197,7 +183,8 @@ def check_kurosannpei(ohlcv_data_list, n=0):
     target_ohlcv_data_list = [ohlcv_data_list[i+1] for i in range(n, n+3)]
 
     def isNegativeCandle(ohlcv_data):
-        return not isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_SELL)
+        # return not isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_SELL)
+        return not isPositive(ohlcv_data) # キャンドルチェック行わない
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
     if all(isNegativeCandle(v) for v in target_ohlcv_data_list) and isDescend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isDescend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
@@ -243,43 +230,17 @@ def sell_signal(status, ohlcv_data_list, begin=0):
 def place_order(status, ohlcv_data_list):
     if status["buy_signal"]:
         # BitFlyerに買いオーダーを出す
-        while True:
-            try:
-                order = bitflyer.create_order(
-                    symbol = 'BTC/JPY',
-                    type='market',          #成行注文 
-                    side='buy',
-                    amount='0.01',
-                    params = { "product_code" : "FX_BTC_JPY" })
-                print(str(ohlcv_data_list[0]["close_price"]) + "で買いの成行注文を出しました")
-                status["order"]["exist"] = True
-                status["order"]["side"] = "BUY"
-                time.sleep(30)      # APIの注文反映待ち 
-                break
-            except ccxt.BaseError as e:
-                print("BitFlyerのAPIエラー発生", e)
-                print("注文の中心が失敗しました．30秒後に再度実行します")
-                time.sleep(30)
+        gateway.private_order_by_market('buy', 0.01)
+        print("BitFlyerに買いの成行注文を出しました")
+        status["order"]["exist"] = True
+        status["order"]["side"] = "BUY"
 
     if status["sell_signal"]:
         # BitFlyerに売りオーダーを出す
-        while True:
-            try:
-                order = bitflyer.create_order(
-                    symbol = 'BTC/JPY',
-                    type='market',          #成行注文 
-                    side='sell',
-                    amount='0.01',
-                    params = { "product_code" : "FX_BTC_JPY" })
-                print(str(ohlcv_data_list[0]["close_price"]) + "で売りの成行注文を出しました")
-                status["order"]["exist"] = True
-                status["order"]["side"] = "SELL"
-                time.sleep(30)      # APIの注文反映待ち
-                break
-            except ccxt.BaseError as e:
-                print("BitFlyerのAPIエラー発生", e)
-                print("注文の中心が失敗しました．30秒後に再度実行します")
-                time.sleep(30)
+        gateway.private_order_by_market('sell', 0.01)
+        print("BitFlyerに売りの成行注文を出しました")
+        status["order"]["exist"] = True
+        status["order"]["side"] = "SELL"
         
     # シグナル初期化
     status["buy_signal"] = False
@@ -290,8 +251,8 @@ def place_order(status, ohlcv_data_list):
 # 注文が約定したか確認する関数
 def check_order(status):
     
-    position = bitflyer.private_get_getpositions(params = { "product_code" : "FX_BTC_JPY" })    # BitFlyerにポジションを確認
-    orders = bitflyer.fetch_open_orders(symbol = "BTC/JPY", params = { "product_code" : "FX_BTC_JPY" })     #BitFlyerに注文を確認 
+    position = gateway.private_get_getpositions()
+    orders = gateway.private_get_orders()
 
     if position:
         print("注文が約定しました")
@@ -315,12 +276,7 @@ def check_order(status):
 
 def cancel_order(orders, status):
     
-    for o in orders:
-        bitflyer.cancel_order(
-            symbol = "BTC/JPY",
-			id = o["id"],
-			params = { "product_code" : "FX_BTC_JPY" }
-        )
+    gateway.private_cancel_all_orders(orders)
     print("約定しなかった注文をキャンセルしました")
     status["order"]["count"] = 0
     status["order"]["exist"] = False
@@ -328,7 +284,7 @@ def cancel_order(orders, status):
     # 通信スレ違いで約定する可能があるため20秒後に再度確認
     print("20秒後に，再度注文が約定していないかを確認します")
     time.sleep(20)
-    position = bitflyer.private_get_getpositions( params = { "product_code" : "FX_BTC_JPY" })
+    position = gateway.private_get_getpositions()
     if not position:
         print("現在，未決済のポジションはありません")
     else:
@@ -348,44 +304,14 @@ def settlement_position(status, ohlcv_data_list, begin=0):
         if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
             print("前回の終値を下回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
             # BitFlyerに清算注文を出す
-            while True:
-                try:
-                    order = bitflyer.create_order(
-                        symbol = 'BTC/JPY',
-                        type='market',
-                        side='sell',
-                        amount='0.01',
-                        params = { "product_code" : "FX_BTC_JPY" })
-                    status["position"]["exist"] = False
-                    status["position"]["side"] = ""
-                    time.sleep(30) # API反映待ち
-                    break
-                
-                except ccxt.BaseError as e:
-                    print("BitflyerのAPIでエラー発生",e)
-                    print("注文の通信が失敗しました。30秒後に再トライします")
-                    time.sleep(30)
+            gateway.private_order_by_market('sell', 0.01)
+            status["position"]["exist"] = False
 
     if status["position"]["side"] == "SELL":
         if ohlcv_data_list[begin]["close_price"] > ohlcv_data_list[begin+1]["close_price"]:
             print("前回の終値を上回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
             # BitFlyerに清算注文を出す
-            while True:
-                try:
-                    order = bitflyer.create_order(
-                        symbol = 'BTC/JPY',
-                        type='market',
-                        side='buy',
-                        amount='0.01',
-                        params = { "product_code" : "FX_BTC_JPY" })
-                    status["position"]["exist"] = False
-                    status["position"]["side"] = ""
-                    time.sleep(30) # API反映待ち
-                    break
-                
-                except ccxt.BaseError as e:
-                    print("BitflyerのAPIでエラー発生",e)
-                    print("注文の通信が失敗しました。30秒後に再トライします")
-                    time.sleep(30)
-
+            gateway.private_order_by_market('buy', 0.01)
+            status["position"]["exist"] = False
+    
     return status
