@@ -9,7 +9,7 @@ status = {
     "buy_signal": False,    # TODO 今後重みを表す数値にしたい
     "sell_signal": False,
 
-    # テクニカル分析（ここに手法を増やしていく）
+    # テクニカル分析 TODO ここに手法を増やしていく
     "analysis":{
         "akasanpei": False,
         "kurosanpei": False,
