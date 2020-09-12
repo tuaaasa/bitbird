@@ -2,6 +2,8 @@
 from datetime import datetime
 import time
 import gateway
+import constrants
+import slack
 
 REALBODY_RATE = 0.3
 INCREASE_RATE = 0.0003
@@ -9,6 +11,8 @@ ORDER_BUY = "buy"
 ORDER_SELL = "sell"
 
 # OHLCVデータ取得関数
+
+
 def get_ohlcv(period, before=0, after=0):
     """
     period: 時間足（1m=60，1h=3600，1d=86400）
@@ -32,12 +36,12 @@ def get_ohlcv(period, before=0, after=0):
     if data["result"][str(period)] is not None:
         for i in data["result"][str(period)]:
             ohlcv.insert(0, {"close_time": i[0],
-            "close_time_dt": datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
-            "open_price": i[1],
-            "high_price": i[2],
-            "low_price": i[3],
-            "close_price": i[4],
-            "volume": i[5]})
+                             "close_time_dt": datetime.fromtimestamp(i[0]).strftime('%Y/%m/%d %H:%M'),
+                             "open_price": i[1],
+                             "high_price": i[2],
+                             "low_price": i[3],
+                             "close_price": i[4],
+                             "volume": i[5]})
     return ohlcv
 
 
@@ -154,7 +158,7 @@ def check_akasanpei(ohlcv_data_list, n=0):
 
     def isPositiveCandle(ohlcv_data):
         # return isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_BUY)
-        return isPositive(ohlcv_data) # キャンドルチェック行わない
+        return isPositive(ohlcv_data)  # キャンドルチェック行わない
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
     # https://qiita.com/l_v_yonsama/items/07e754193ed88ed0baaf#%E9%85%8D%E5%88%97%E3%81%AE%E3%81%99%E3%81%B9%E3%81%A6%E3%81%AE%E8%A6%81%E7%B4%A0%E3%81%8C%E9%80%9A%E3%82%8B%E3%81%8B%E3%81%A9%E3%81%86%E3%81%8B%E3%82%92%E3%83%86%E3%82%B9%E3%83%88
@@ -181,7 +185,7 @@ def check_kurosannpei(ohlcv_data_list, n=0):
 
     def isNegativeCandle(ohlcv_data):
         # return not isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_SELL)
-        return not isPositive(ohlcv_data) # キャンドルチェック行わない
+        return not isPositive(ohlcv_data)  # キャンドルチェック行わない
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
     if all(isNegativeCandle(v) for v in target_ohlcv_data_list) and isDescend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isDescend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
@@ -201,7 +205,8 @@ def buy_signal(status, ohlcv_data_list, begin=0):
     # 赤三兵
     if check_akasanpei(ohlcv_data_list, begin):
         status["buy_signal"] = True
-        print("赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
+        print(
+            "赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
     return status
 
 
@@ -216,7 +221,8 @@ def sell_signal(status, ohlcv_data_list, begin=0):
     # 黒三兵
     if check_kurosannpei(ohlcv_data_list, begin):
         status["sell_signal"] = True
-        print("黒三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で売りを入れます")
+        print(
+            "黒三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で売りを入れます")
     return status
 
 
@@ -226,17 +232,19 @@ def place_order(status, ohlcv_data_list):
     if status["buy_signal"]:
         # BitFlyerに買いオーダーを出す
         # gateway.private_order_by_market('buy', 0.01)
-        gateway.private_order_by_limit('buy', ohlcv_data_list[1]["close_price"], 0.01) # 赤三兵用．[1]で1個前の終値を利用している
+        gateway.private_order_by_limit(
+            'buy', ohlcv_data_list[1]["close_price"], 0.01)  # 赤三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "BUY"
 
     if status["sell_signal"]:
         # BitFlyerに売りオーダーを出す
         # gateway.private_order_by_market('sell', 0.01)
-        gateway.private_order_by_limit('sell', ohlcv_data_list[1]["close_price"], 0.01) # 黒三兵用．[1]で1個前の終値を利用している
+        gateway.private_order_by_limit(
+            'sell', ohlcv_data_list[1]["close_price"], 0.01)  # 黒三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "SELL"
-        
+
     # シグナル初期化
     status["buy_signal"] = False
     status["sell_signal"] = False
@@ -245,16 +253,18 @@ def place_order(status, ohlcv_data_list):
 
 # 注文が約定したか確認する関数
 def check_order(status):
-    
+
     position = gateway.private_get_getpositions()
     orders = gateway.private_get_orders()
 
     if position:
-        print("注文が約定しました")
+        text = "注文が約定しました"
+        print(text)
+        slack.info(constrants.NotificationTitle.Position, text)
         status["order"]["exist"] = False
         status["position"]["exist"] = True
         status["position"]["side"] = status["order"]["side"]
-        status["order"]["side"] = ""    #オーダーサイドを初期化
+        status["order"]["side"] = ""  # オーダーサイドを初期化
     else:
         if orders:
             print("未約定の注文があります")
@@ -270,7 +280,7 @@ def check_order(status):
 
 
 def cancel_order(orders, status):
-    
+
     gateway.private_cancel_all_orders(orders)
     print("約定しなかった注文をキャンセルしました")
     status["order"]["count"] = 0
@@ -286,9 +296,9 @@ def cancel_order(orders, status):
         print("現在，ポジションがあります")
         status["position"]["exist"] = True
         status["position"]["side"] = position[0]["side"]
-    
+
     return status
-        
+
 
 # ポジジョンを清算するか関数
 # この実装では清算戦略を立てづらい 清算シグナルとsettlementを関数で分けるか
@@ -297,16 +307,24 @@ def settlement_position(status, ohlcv_data_list, begin=0):
 
     if status["position"]["side"] == "BUY":
         if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
-            print("前回の終値を下回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
+            print("前回の終値を下回ったので" +
+                  str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
             # BitFlyerに清算注文を出す
             gateway.private_order_by_market('sell', 0.01)
             status["position"]["exist"] = False
 
     if status["position"]["side"] == "SELL":
         if ohlcv_data_list[begin]["close_price"] > ohlcv_data_list[begin+1]["close_price"]:
-            print("前回の終値を上回ったので" + str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
+            print("前回の終値を上回ったので" +
+                  str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
             # BitFlyerに清算注文を出す
             gateway.private_order_by_market('buy', 0.01)
             status["position"]["exist"] = False
-    
+    collateral = gateway.private_get_getcollateral()
+    text = "預入証拠金: " + collateral.collateral
+    + "\n建玉評価損益: " + collateral.open_position_pnl
+    + "\n現在の必要証拠金: " + collateral.require_collateral
+    + "\n証拠金維持率: " + collateral.keep_rate
+    print(text)
+    slack.info(constrants.NotificationTitle.Info, text)
     return status

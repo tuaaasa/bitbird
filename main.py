@@ -16,14 +16,14 @@ status = {
     },
 
     # オーダー（注文）管理
-    "order":{ 
+    "order": {
         "exist": False,
         "side": "",
         "count": 0  # キャンセルのためのカウント
     },
 
     # ポジション（建玉）管理
-    "position":{    
+    "position": {
         "exist": False,
         "side": ""
     }
@@ -34,14 +34,14 @@ close_time = ""     # 時間管理用
 while True:
 
     ohlcv = functions.get_ohlcv(period)
-    
+
     if ohlcv[0]["close_time"] != close_time:
         functions.show_ohlcv(ohlcv)
 
-        if not status["position"]["exist"]: # ポジションを持っていなかったら
-            status = functions.buy_signal(status, ohlcv) # 買いシグナルチェック
-            status = functions.sell_signal(status, ohlcv) # 売りシグナルチェック
-            functions.place_order(status, ohlcv) # シグナルに基づき注文を出す
+        if not status["position"]["exist"]:  # ポジションを持っていなかったら
+            status = functions.buy_signal(status, ohlcv)  # 買いシグナルチェック
+            status = functions.sell_signal(status, ohlcv)  # 売りシグナルチェック
+            status = functions.place_order(status, ohlcv)  # シグナルに基づき注文を出す
 
         if status["order"]["exist"]:        # オーダーを出していたら
             status = functions.check_order(status)  # 約定チェック
@@ -66,8 +66,8 @@ while True:
 
 #     if status["order"]["exist"]:        # オーダーを出していたら
 #         status = functions.check_order(status)  # 約定チェック
-    
+
 #     if status["position"]["exist"]:              # ポジションを持っていたら
 #         status = functions.settlement_position(status, ohlcv, i)    # 清算チェック
-    
+
 #     time.sleep(0.01)
