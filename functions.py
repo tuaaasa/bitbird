@@ -260,7 +260,7 @@ def check_order(status):
     if position:
         text = "注文が約定しました"
         print(text)
-        slack.info(constrants.NotificationTitle.Position, text)
+        slack.info(constrants.NotificationTitle.Position.value, text)
         status["order"]["exist"] = False
         status["position"]["exist"] = True
         status["position"]["side"] = status["order"]["side"]
@@ -321,10 +321,19 @@ def settlement_position(status, ohlcv_data_list, begin=0):
             gateway.private_order_by_market('buy', 0.01)
             status["position"]["exist"] = False
     collateral = gateway.private_get_getcollateral()
-    text = "預入証拠金: " + collateral.collateral
-    + "\n建玉評価損益: " + collateral.open_position_pnl
-    + "\n現在の必要証拠金: " + collateral.require_collateral
-    + "\n証拠金維持率: " + collateral.keep_rate
+    text = "預入証拠金: " + str(collateral["collateral"])\
+        + "\n建玉評価損益: " + str(collateral["open_position_pnl"])\
+        + "\n現在の必要証拠金: " + str(collateral["require_collateral"])\
+        + "\n証拠金維持率: " + str(collateral["keep_rate"])
     print(text)
-    slack.info(constrants.NotificationTitle.Info, text)
+    slack.info(constrants.NotificationTitle.Info.value, text)
     return status
+
+
+# 確認用
+# collateral = gateway.private_get_getcollateral()
+# text = "預入証拠金: " + str(collateral["collateral"])\
+#     + "\n建玉評価損益: " + str(collateral["open_position_pnl"])\
+#     + "\n現在の必要証拠金: " + str(collateral["require_collateral"])\
+#     + "\n証拠金維持率: " + str(collateral["keep_rate"])
+# print(text)

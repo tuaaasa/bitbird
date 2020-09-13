@@ -29,7 +29,7 @@ def get_ohlcv_from_cryptowatch(params):
         except requests.exceptions.RequestException as e:
             i += 1
             if i == ERROR_COUNT:
-                slack.error(constrants.NotificationTitle.Error, e)
+                slack.error(constrants.NotificationTitle.Error.value, e)
                 raise e
             print("CryptWatchからOHLCVデータの取得に失敗しました: ", e)
             print("10秒後，再度実行します")
@@ -50,14 +50,14 @@ def private_order_by_market(side, amount):
             )
             text = side + " の成行決済注文を出しました"
             print(text)
-            slack.info(constrants.NotificationTitle.Settlement, text)
+            slack.info(constrants.NotificationTitle.Settlement.value, text)
             time.sleep(10)      # APIの注文反映待ち
             break
 
         except ccxt.BaseError as e:
             i += 1
             if i == ERROR_COUNT:
-                slack.error(constrants.NotificationTitle.Error, e)
+                slack.error(constrants.NotificationTitle.Error.value, e)
                 raise e
             print("BitFlyerのAPIエラー発生", e)
             print("注文が失敗しました．10秒後に再度実行します")
@@ -81,14 +81,14 @@ def private_order_by_limit(side, plice, amount):
             )
             text = "価格" + str(plice) + "で " + side + " の指値注文を出しました"
             print(text)
-            slack.info(constrants.NotificationTitle.Order, text)
+            slack.info(constrants.NotificationTitle.Order.value, text)
             time.sleep(10)      # APIの注文反映待ち
             break
 
         except ccxt.BaseError as e:
             i += 1
             if i == ERROR_COUNT:
-                slack.error(constrants.NotificationTitle.Error, e)
+                slack.error(constrants.NotificationTitle.Error.value, e)
                 raise e
             print("BitFlyerのAPIエラー発生", e)
             print("注文が失敗しました．10秒後に再度実行します")
@@ -124,5 +124,5 @@ def private_cancel_all_orders(orders):
             id=o["id"],
             params={"product_code": "FX_BTC_JPY"}
         )
-        text += o["id"] + "\n"
-    slack.info(constrants.NotificationTitle.OrderCancel, text)
+        text += str(o["id"]) + "\n"
+    slack.info(constrants.NotificationTitle.OrderCancel.value, text)
