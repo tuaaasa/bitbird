@@ -1,3 +1,5 @@
+# 過去データ6000件を用いてバックテストを行うプログラム
+
 # coding: utf-8
 import functions
 import time
@@ -44,7 +46,6 @@ status = {
 		"log":[]
 	}
 }
-
 
 close_time = ""     # 時間管理用
 
