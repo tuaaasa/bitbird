@@ -4,6 +4,7 @@ import time
 import gateway
 import constrants
 import slack
+import numpy as np
 
 REALBODY_RATE = 0.3
 INCREASE_RATE = 0.0003
@@ -11,8 +12,6 @@ ORDER_BUY = "buy"
 ORDER_SELL = "sell"
 
 # OHLCVデータ取得関数
-
-
 def get_ohlcv(period, before=0, after=0):
     """
     period: 時間足（1m=60，1h=3600，1d=86400）
@@ -77,7 +76,7 @@ def show_all_ohlcv(ohlcv_data_list):
 
 
 # 陽線陰線チェック関数
-def isPositive(ohlcv_data):
+def __isPositive(ohlcv_data):
     """
     【返り値】
     陽線：True
@@ -90,7 +89,7 @@ def isPositive(ohlcv_data):
 
 
 # 上昇チェック関数
-def isAscend(ohlcv_data, last_ohlcv_data):
+def __isAscend(ohlcv_data, last_ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -106,7 +105,7 @@ def isAscend(ohlcv_data, last_ohlcv_data):
 
 
 # 下降チェック関数
-def isDescend(ohlcv_data, last_ohlcv_data):
+def __isDescend(ohlcv_data, last_ohlcv_data):
     """
     【条件】
     （始値＞前の始値）かつ（終値＞前の終値）→ 上昇
@@ -122,7 +121,7 @@ def isDescend(ohlcv_data, last_ohlcv_data):
 
 
 # ろうそくの大きさ判定
-def check_candle(ohlcv_data, order_type):
+def __check_candle(ohlcv_data, order_type):
     realbody_rate = abs(ohlcv_data["close_price"] - ohlcv_data["open_price"]) / (
         ohlcv_data["high_price"]-ohlcv_data["low_price"])
     increase_rate = (ohlcv_data["close_price"] / ohlcv_data["open_price"])-1
@@ -141,7 +140,7 @@ def check_candle(ohlcv_data, order_type):
 
 
 # 赤三兵による買いサイン
-def check_akasanpei(ohlcv_data_list, n=0):
+def __check_akasanpei(ohlcv_data_list, n=0):
     """
     【条件】
     1．3足連続で（終値＞始値）の足が続いている．
@@ -157,19 +156,18 @@ def check_akasanpei(ohlcv_data_list, n=0):
         n, n+3)]  # [ohlcv_data_list[n+1], ohlcv_data_list[n+2], ohlcv_data_list[n+3]]
 
     def isPositiveCandle(ohlcv_data):
-        # return isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_BUY)
-        return isPositive(ohlcv_data)  # キャンドルチェック行わない
+        # return __isPositive(ohlcv_data) and __check_candle(ohlcv_data, ORDER_BUY)
+        return __isPositive(ohlcv_data)
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
-    # https://qiita.com/l_v_yonsama/items/07e754193ed88ed0baaf#%E9%85%8D%E5%88%97%E3%81%AE%E3%81%99%E3%81%B9%E3%81%A6%E3%81%AE%E8%A6%81%E7%B4%A0%E3%81%8C%E9%80%9A%E3%82%8B%E3%81%8B%E3%81%A9%E3%81%86%E3%81%8B%E3%82%92%E3%83%86%E3%82%B9%E3%83%88
-    if all(isPositiveCandle(v) for v in target_ohlcv_data_list) and isAscend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isAscend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
+    if all(isPositiveCandle(v) for v in target_ohlcv_data_list) and __isAscend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and __isAscend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
         return True
     else:
         return False
 
 
 # 黒三兵による売りサイン
-def check_kurosannpei(ohlcv_data_list, n=0):
+def __check_kurosannpei(ohlcv_data_list, n=0):
     """
     【条件】
     1．3足連続で（終値＜始値）の足が続いている．
@@ -184,11 +182,11 @@ def check_kurosannpei(ohlcv_data_list, n=0):
     target_ohlcv_data_list = [ohlcv_data_list[i+1] for i in range(n, n+3)]
 
     def isNegativeCandle(ohlcv_data):
-        # return not isPositive(ohlcv_data) and check_candle(ohlcv_data, ORDER_SELL)
-        return not isPositive(ohlcv_data)  # キャンドルチェック行わない
+        # return not __isPositive(ohlcv_data) and __check_candle(ohlcv_data, ORDER_SELL)
+        return not __isPositive(ohlcv_data)
 
     # 形成中のローソクは加味しないのでohlcv_data[n+0]は使わない
-    if all(isNegativeCandle(v) for v in target_ohlcv_data_list) and isDescend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and isDescend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
+    if all(isNegativeCandle(v) for v in target_ohlcv_data_list) and __isDescend(ohlcv_data_list[n+1], ohlcv_data_list[n+2]) and __isDescend(ohlcv_data_list[n+2], ohlcv_data_list[n+3]):
         return True
     else:
         return False
@@ -203,7 +201,7 @@ def buy_signal(status, ohlcv_data_list, begin=0):
     シグナルなし：status[order]: Flase
     """
     # 赤三兵
-    if check_akasanpei(ohlcv_data_list, begin):
+    if __check_akasanpei(ohlcv_data_list, begin):
         status["buy_signal"] = True
         print(
             "赤三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で買いを入れます")
@@ -219,7 +217,7 @@ def sell_signal(status, ohlcv_data_list, begin=0):
     シグナルなし：status[order]: Flase
     """
     # 黒三兵
-    if check_kurosannpei(ohlcv_data_list, begin):
+    if __check_kurosannpei(ohlcv_data_list, begin):
         status["sell_signal"] = True
         print(
             "黒三兵 " + str(ohlcv_data_list[begin+1]["close_price"]) + "で売りを入れます")
@@ -231,19 +229,19 @@ def sell_signal(status, ohlcv_data_list, begin=0):
 def place_order(status, ohlcv_data_list):
     if status["buy_signal"]:
         # BitFlyerに買いオーダーを出す
-        # gateway.private_order_by_market('buy', 0.01)
         gateway.private_order_by_limit(
-            'buy', ohlcv_data_list[1]["close_price"], 0.01)  # 赤三兵用．[1]で1個前の終値を利用している
+            'buy', ohlcv_data_list[1]["close_price"], status["lot"], status["backtest"])  # 赤三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "BUY"
+        status["order"]["price"] = round(ohlcv_data_list[1]["close_price"] * status["lot"])
 
     if status["sell_signal"]:
         # BitFlyerに売りオーダーを出す
-        # gateway.private_order_by_market('sell', 0.01)
         gateway.private_order_by_limit(
-            'sell', ohlcv_data_list[1]["close_price"], 0.01)  # 黒三兵用．[1]で1個前の終値を利用している
+            'sell', ohlcv_data_list[1]["close_price"], status["lot"], status["backtest"])  # 黒三兵用．[1]で1個前の終値を利用している
         status["order"]["exist"] = True
         status["order"]["side"] = "SELL"
+        status["order"]["price"] = round(ohlcv_data_list[1]["close_price"] * status["lot"])
 
     # シグナル初期化
     status["buy_signal"] = False
@@ -254,17 +252,20 @@ def place_order(status, ohlcv_data_list):
 # 注文が約定したか確認する関数
 def check_order(status):
 
-    position = gateway.private_get_getpositions()
-    orders = gateway.private_get_orders()
+    position = gateway.private_get_positions(status["backtest"])
+    orders = gateway.private_get_orders(status["backtest"])
 
     if position:
         text = "注文が約定しました"
         print(text)
-        slack.info(constrants.NotificationTitle.Position.value, text)
+        slack.info(constrants.NotificationTitle.Position.value, text, status["backtest"])
         status["order"]["exist"] = False
+        status["order"]["count"] = 0
         status["position"]["exist"] = True
         status["position"]["side"] = status["order"]["side"]
+        status["position"]["price"] = status["order"]["price"]
         status["order"]["side"] = ""  # オーダーサイドを初期化
+
     else:
         if orders:
             print("未約定の注文があります")
@@ -272,16 +273,16 @@ def check_order(status):
                 print(o["id"])  # 未約定注文一覧表示
             status["order"]["count"] += 1
             if status["order"]["count"] > 6:
-                status = cancel_order(orders, status)    # 時間経過によるキャンセル処理
+                status = __cancel_order(orders, status)    # 時間経過によるキャンセル処理
         else:
             print("注文が遅延しているようです")     # BitFlyerの反映遅延対策
 
     return status
 
 
-def cancel_order(orders, status):
+def __cancel_order(orders, status):
 
-    gateway.private_cancel_all_orders(orders)
+    gateway.private_cancel_all_orders(orders, status["backtest"])
     print("約定しなかった注文をキャンセルしました")
     status["order"]["count"] = 0
     status["order"]["exist"] = False
@@ -289,7 +290,7 @@ def cancel_order(orders, status):
     # 通信スレ違いで約定する可能があるため20秒後に再度確認
     print("20秒後に，注文が約定していないかを再確認します")
     time.sleep(20)
-    position = gateway.private_get_getpositions()
+    position = gateway.private_get_positions(status["backtest"])
     if not position:
         print("現在，ポジションはありません")
     else:
@@ -301,39 +302,93 @@ def cancel_order(orders, status):
 
 
 # ポジジョンを清算するか関数
-# この実装では清算戦略を立てづらい 清算シグナルとsettlementを関数で分けるか
-# これでは清算のオーダーが通ったか確認できない（成行注文だからいいのか？）
 def settlement_position(status, ohlcv_data_list, begin=0):
 
     if status["position"]["side"] == "BUY":
         if ohlcv_data_list[begin]["close_price"] < ohlcv_data_list[begin+1]["close_price"]:
             print("前回の終値を下回ったので" +
                   str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
-            # BitFlyerに清算注文を出す
-            gateway.private_order_by_market('sell', 0.01)
+            gateway.private_order_by_market('sell', status["lot"], status["backtest"])       # BitFlyerに売りの清算注文を出す
+            __record_trade(status, ohlcv_data_list)
             status["position"]["exist"] = False
 
     if status["position"]["side"] == "SELL":
         if ohlcv_data_list[begin]["close_price"] > ohlcv_data_list[begin+1]["close_price"]:
             print("前回の終値を上回ったので" +
                   str(ohlcv_data_list[begin]["close_price"]) + "あたりで成行決済します")
-            # BitFlyerに清算注文を出す
-            gateway.private_order_by_market('buy', 0.01)
+            gateway.private_order_by_market('buy', status["lot"], status["backtest"])        # BitFlyerに買いの清算注文を出す
             status["position"]["exist"] = False
-    collateral = gateway.private_get_getcollateral()
-    text = "預入証拠金: " + str(collateral["collateral"])\
-        + "\n建玉評価損益: " + str(collateral["open_position_pnl"])\
-        + "\n現在の必要証拠金: " + str(collateral["require_collateral"])\
-        + "\n証拠金維持率: " + str(collateral["keep_rate"])
-    print(text)
-    slack.info(constrants.NotificationTitle.Info.value, text)
+            __record_trade(status, ohlcv_data_list)
+    gateway.private_get_collateral(status["backtest"])
+    
     return status
 
 
-# 確認用
-# collateral = gateway.private_get_getcollateral()
-# text = "預入証拠金: " + str(collateral["collateral"])\
-#     + "\n建玉評価損益: " + str(collateral["open_position_pnl"])\
-#     + "\n現在の必要証拠金: " + str(collateral["require_collateral"])\
-#     + "\n証拠金維持率: " + str(collateral["keep_rate"])
-# print(text)
+# 各トレードのパフォーマンスを記録する関数
+def __record_trade(status, ohlcv_data_list):
+    slippage = 0.0 # スリッページの設定
+
+	# 取引手数料等の計算
+    entry_price = status["position"]["price"]
+    exit_price = round(ohlcv_data_list[0]["close_price"] * status["lot"])
+    trade_cost = round( exit_price * slippage )
+    
+    print("スリッページ・手数料として " + str(trade_cost) + "円を考慮します\n")
+    status["records"]["slippage"].append(trade_cost)
+
+    # 値幅の計算
+    buy_profit = exit_price - entry_price - trade_cost
+    sell_profit = entry_price - exit_price - trade_cost
+    
+
+    # 利益が出てるかの計算
+    if status["position"]["side"] == "BUY":
+        status["records"]["buy-count"] += 1
+        status["records"]["buy-profit"].append( buy_profit )
+        status["records"]["buy-return"].append( round( buy_profit / entry_price * 100, 4 ))
+        if buy_profit  > 0:
+            status["records"]["buy-winning"] += 1
+            print(str(buy_profit) + "円の利益です\n")
+        else:
+            print(str(buy_profit) + "円の損失です\n")
+
+    if status["position"]["side"] == "SELL":
+        status["records"]["sell-count"] += 1
+        status["records"]["sell-profit"].append( sell_profit )
+        status["records"]["sell-return"].append( round( sell_profit / entry_price * 100, 4 ))
+        if sell_profit > 0:
+            status["records"]["sell-winning"] += 1
+            print(str(sell_profit) + "円の利益です\n")
+        else:
+            print(str(sell_profit) + "円の損失です\n")    
+    return status
+
+
+# バックテストの集計用の関数
+def backtest(status):
+	
+	buy_gross_profit = np.sum(status["records"]["buy-profit"])
+	sell_gross_profit = np.sum(status["records"]["sell-profit"])
+	
+	print("バックテストの結果")
+	print("--------------------------")
+	print("買いエントリの成績")
+	print("--------------------------")
+	print("トレード回数  :  {}回".format(status["records"]["buy-count"] ))
+	print("勝率          :  {}％".format(round(status["records"]["buy-winning"] / status["records"]["buy-count"] * 100,1)))
+	print("平均リターン  :  {}％".format(round(np.average(status["records"]["buy-return"]),4)))
+	print("総損益        :  {}円".format( np.sum(status["records"]["buy-profit"]) ))
+	
+	print("--------------------------")
+	print("売りエントリの成績")
+	print("--------------------------")
+	print("トレード回数  :  {}回".format(status["records"]["sell-count"] ))
+	print("勝率          :  {}％".format(round(status["records"]["sell-winning"] / status["records"]["sell-count"] * 100,1)))
+	print("平均リターン  :  {}％".format(round(np.average(status["records"]["sell-return"]),4)))
+	print("総損益        :  {}円".format( np.sum(status["records"]["sell-profit"]) ))
+	
+	print("--------------------------")
+	print("総合の成績")
+	print("--------------------------")
+	print("総損益        :  {}円".format( np.sum(status["records"]["sell-profit"]) + np.sum(status["records"]["buy-profit"]) ))
+	print("手数料合計    :  {}円".format( np.sum(status["records"]["slippage"]) ))

@@ -3,11 +3,15 @@
 # coding: utf-8
 import functions
 import time
-import ccxt
 
-period = 60   # 1m=60，1h=3600，1d=86400
+
+# バックテスト用パラメータ
+period = 60   # 1m=60，5m=300, 1h=3600，1d=86400
+
 
 status = {
+    "lot": 0.01,
+
     "buy_signal": False,    # TODO 今後重みを表す数値にしたい
     "sell_signal": False,
 
@@ -21,13 +25,15 @@ status = {
     "order": {
         "exist": False,
         "side": "",
+        "price" : 0,
         "count": 0  # キャンセルのためのカウント
     },
 
     # ポジション（建玉）管理
     "position": {
         "exist": False,
-        "side": ""
+        "side": "",
+        "price": 0,
     }, 
 
     # トレード記録
@@ -44,48 +50,36 @@ status = {
 		
 		"slippage":[],
 		"log":[]
-	}
+	},
+
+    "backtest": True
 }
 
-close_time = ""     # 時間管理用
+# 過去6000件データ取得
+ohlcv_all = functions.get_ohlcv(period, after=1514764800) 
 
-while True:
+i = 0
+while 0 <= len(ohlcv_all) - (i + 500):
+    ohlcv = ohlcv_all[len(ohlcv_all) - (i + 500) : len(ohlcv_all) - i]
+    functions.show_ohlcv(ohlcv)
 
-    ohlcv = functions.get_ohlcv(period)
-
-    if ohlcv[0]["close_time"] != close_time:
-        functions.show_ohlcv(ohlcv)
-
-        if not status["position"]["exist"]:  # ポジションを持っていなかったら
+    if not status["position"]["exist"]:  # ポジションを持っていなかったら
             status = functions.buy_signal(status, ohlcv)  # 買いシグナルチェック
             status = functions.sell_signal(status, ohlcv)  # 売りシグナルチェック
             status = functions.place_order(status, ohlcv)  # シグナルに基づき注文を出す
 
-        if status["order"]["exist"]:        # オーダーを出していたら
+    if status["order"]["exist"]:        # オーダーを出していたら
             status = functions.check_order(status)  # 約定チェック
 
-        if status["position"]["exist"]:              # ポジションを持っていたら
+    if status["position"]["exist"]:              # ポジションを持っていたら
             status = functions.settlement_position(status, ohlcv)    # 清算チェック
 
-    close_time = ohlcv[0]["close_time"]
-    time.sleep(10)
+    i+=1
 
+print("--------------------------")
+print("開始データ : " + ohlcv_all[-1]["close_time_dt"] + "  UNIX時間 : " + str(ohlcv_all[-1]["close_time"]))
+print("終了データ : " + ohlcv_all[0]["close_time_dt"] + "  UNIX時間 : " + str(ohlcv_all[0]["close_time"]))
+print("合計 ： " + str(len(ohlcv_all) ) + "件のローソク足データを取得")
+print("--------------------------")
 
-# ↓↓テスト運用↓↓
-
-# for i in reversed(range(300)):  # 新しいデータが入ってきていると仮定
-#     functions.show_ohlcv(ohlcv, i)
-
-#     if not status["position"]["exist"]: # ポジションを持っていなかったら
-#         status = functions.buy_signal(status, ohlcv, i) # 買いシグナルチェック
-#         status = functions.sell_signal(status, ohlcv, i) # 売りシグナルチェック
-#         functions.place_order(status, ohlcv, i) # シグナルに基づき注文を出す
-
-
-#     if status["order"]["exist"]:        # オーダーを出していたら
-#         status = functions.check_order(status)  # 約定チェック
-
-#     if status["position"]["exist"]:              # ポジションを持っていたら
-#         status = functions.settlement_position(status, ohlcv, i)    # 清算チェック
-
-#     time.sleep(0.01)
+functions.backtest(status)
